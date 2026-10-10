@@ -1,0 +1,23 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-22.04, ubuntu-24.04]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install test tools
+        run: pip install shellcheck-py==0.10.0.1 pyyaml==6.0.2
+      - name: Run tests
+        run: tests/run_tests.sh
+      - name: Validate compose file with Docker
+        run: cp .env.example .env && docker compose config --quiet

@@ -1,0 +1,34 @@
+# Alternative to Caddy: host nginx in front of n8n.
+# 1. Remove the caddy service from docker-compose.yml and publish n8n on 127.0.0.1:5678.
+# 2. Replace __N8N_HOST__, copy to /etc/nginx/sites-available/n8n, enable it.
+# 3. Get a certificate: certbot --nginx -d __N8N_HOST__
+server {
+    listen 80;
+    server_name __N8N_HOST__;
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    server_name __N8N_HOST__;
+
+    ssl_certificate     /etc/letsencrypt/live/__N8N_HOST__/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/__N8N_HOST__/privkey.pem;
+
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+    add_header X-Content-Type-Options nosniff always;
+    client_max_body_size 50m;
+
+    location / {
+        proxy_pass http://127.0.0.1:5678;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_buffering off;
+        proxy_read_timeout 3600s;
+    }
+}
